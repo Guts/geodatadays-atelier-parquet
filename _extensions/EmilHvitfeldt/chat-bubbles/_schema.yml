@@ -2,7 +2,7 @@ $schema: https://m.canouil.dev/quarto-wizard/assets/schema/v1/extension-schema.j
 
 classes:
   chat:
-    description: "Container for a chat conversation. Wrap all messages in this div. Accepts theme, names, self, and avatars attributes."
+    description: "Container for a chat conversation. Wrap all messages in this div. Accepts theme (imessage, slack, discord, teams, claude-code), names, self, avatars, and (claude-code only) assistant + welcome attributes. names/avatars fall back to deck-wide <meta name=\"chat-names\"> / <meta name=\"chat-avatars\">; the claude-code assistant slot falls back to <meta name=\"chat-assistant\"> (default 2). Only the assistant's turns stream in; its avatar is the blinking --cc-logo."
   speaker-1:
     description: "Message from speaker slot 1. The sender by default."
   speaker-2:

@@ -5,6 +5,7 @@ subtitle: |
 author:
     - Lino Galiana
 date: 2026-09-16
+date-format: long
 slide-number: true
 footer: |
   Geodata Days - Session innovation technologique
@@ -22,13 +23,18 @@ from: markdown+emoji
 resources:
   - data/communes/**
   - data/parcelles-full.geojson
+  - img/**
 header-includes: |
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" integrity="sha256-qx5w1Z7EBGW65+cDDaLzzPKBM/1QLmK9WY7vut/XpzI=" crossorigin="">
+  <!-- Interlocuteurs du chat facon "Claude Code" : 1er = la personne, 2e = l'assistant IA.
+       Seules les reponses de l'assistant se deroulent progressivement ;
+       son avatar clignotant est le logo Parquet. -->
+  <meta name="chat-names" content="Benjamin,parquetGPT">
 ---
 
-## Pour des données statistiques
+## Pour des données statistiques {.slide-chat background-color="#1a1b26"}
 
-:::: {.chat theme="teams" names="Benjamin,parquetGPT"}
+:::: {.chat theme="claude-code"}
 
 ::: {.speaker-1}
 `@lino` la présentation en est où ?
@@ -48,11 +54,6 @@ Je suppose que RPG = **registre parcellaire graphique** et pas *role playing gam
 
 ::: {.speaker-2 .fragment .typing}
 C'est facile si la donnée est en `Parquet` accessible depuis le *cloud*. 
-:::
-
-
-::: {.speaker-2 .fragment .typing}
-Je n'ai même pas besoin de réfléchir plus.
 :::
 
 ::: {.speaker-2 .fragment .typing}
@@ -85,9 +86,9 @@ ORDER BY n DESC
 {{< include demo/test-live-count.qmd >}}
 
 
-## Pour des données géographiques
+## Pour des données géographiques {.slide-chat background-color="#1a1b26"}
 
-:::: {.chat theme="teams" names="Benjamin,parquetGPT"}
+:::: {.chat theme="claude-code"}
 
 ::: {.speaker-1}
 Julien est pas impressionné...
@@ -138,9 +139,9 @@ On va calculer la part des surfaces (et plus seulement des exploitations) dans c
 {{< include demo/test-live-surface.qmd >}}
 
 
-## Pour des applis web
+## Pour des applis web {.slide-chat background-color="#1a1b26"}
 
-:::: {.chat theme="teams" names="Benjamin,parquetGPT"}
+:::: {.chat theme="claude-code"}
 
 ::: {.speaker-1}
 Julien dit que la vitesse c'est pas très important
@@ -168,9 +169,9 @@ Montre moi !
 {{< include demo/explorer-commune.qmd >}}
 
 
-## Pour des applis web fluides
+## Pour des applis web fluides {.slide-chat background-color="#1a1b26"}
 
-:::: {.chat theme="teams" names="Benjamin,parquetGPT"}
+:::: {.chat theme="claude-code"}
 
 ::: {.speaker-1}
 Julien est presque convaincu. 
@@ -192,9 +193,9 @@ Oui bien-sûr. Représentons toutes les parcelles et mettons en surbrillance cel
 {{< include demo/culture-highlight.qmd >}}
 
 
-## Pour reproduire chez soi
+## Pour reproduire chez soi {.slide-chat background-color="#1a1b26"}
 
-:::: {.chat theme="teams" names="Benjamin,parquetGPT"}
+:::: {.chat theme="claude-code"}
 
 ::: {.speaker-1}
 C'est compliqué à reproduire chez soi ?
