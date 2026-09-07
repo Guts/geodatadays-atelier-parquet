@@ -79,7 +79,7 @@ ORDER BY n DESC
 
 ::::
 
-## Test live {.test-live-slide}
+## Démo #1 {.test-live-slide}
 
 {{< include _partials/_duckdb-setup.qmd >}}
 
@@ -134,7 +134,7 @@ On va calculer la part des surfaces (et plus seulement des exploitations) dans c
 
 ::::
 
-## Test live #2 {.test-live-slide}
+## Démo #2 {.test-live-slide}
 
 {{< include demo/test-live-surface.qmd >}}
 
@@ -164,7 +164,7 @@ WHERE r.nom_officiel ILIKE '%<commune>%'
 
 ::::
 
-## Test live #3 {.test-live-slide}
+## Démo #3 {.test-live-slide}
 
 {{< include demo/test-live-commune.qmd >}}
 
@@ -191,7 +191,7 @@ Montre moi !
 
 ::::
 
-## Démo live 3 {.test-live-slide}
+## Démo #4 {.test-live-slide}
 
 {{< include demo/common.qmd >}}
 
@@ -217,7 +217,7 @@ Oui bien-sûr. Représentons toutes les parcelles et mettons en surbrillance cel
 ::::
 
 
-## Des calculs fluides {.test-live-slide}
+## Démo #5 {.test-live-slide}
 
 {{< include demo/culture-highlight.qmd >}}
 

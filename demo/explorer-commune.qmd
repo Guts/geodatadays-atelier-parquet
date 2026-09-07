@@ -224,11 +224,15 @@ communeStats = {
 ```{ojs}
 //| echo: false
 Plot.plot({
-  marginLeft: 220,
-  width: 480,
+  marginLeft: 170,
+  marginRight: 12,
+  width: 470,
   height: 440,
-  x: { label: "Surface (ha)" },
-  y: { label: null, tickFormat: truncateLabel },
+  style: { fontSize: "11px" },
+  x: { label: "Surface (ha)", grid: true },
+  // tickFormat reçoit (valeur, index, …) : sans la flèche, Plot passe l'index
+  // comme 2e argument (maxLen) et tronque chaque label à sa position -> illisible.
+  y: { label: null, tickFormat: (d) => truncateLabel(d, 26) },
   marks: [
     Plot.barX(communeStats.barRows, {
       y: "nom_culture",
