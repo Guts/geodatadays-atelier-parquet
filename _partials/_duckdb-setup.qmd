@@ -139,6 +139,163 @@ function barCell(share, color = "#4758AB") {
 
 ```{ojs}
 //| echo: false
+function debounce(fn, ms = 300) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+```
+
+```{ojs}
+//| echo: false
+// Champ "commande avec autocomplétion" : on tape pour filtrer une liste
+// figée (`options`), mais la valeur retenue (`.value`) est TOUJOURS soit ""
+// soit une entrée exacte de la liste — jamais du texte libre. Ça garantit
+// qu'on n'injecte jamais une commune inexistante dans le SQL. Émet un
+// événement "input" à chaque sélection (y compris le retour à "").
+function comboBox(options, { placeholder = "" } = {}) {
+  // supprime les diacritiques (bloc combinant U+0300..U+036F) pour une
+  // recherche tolérante aux accents ("bethune" trouve "Béthune")
+  const norm = (s) =>
+    String(s)
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .trim();
+  const input = html`<input type="text" class="testlive-search-input" placeholder="${placeholder}"
+    autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">`;
+  const menu = html`<ul class="combo-menu" role="listbox"></ul>`;
+  menu.hidden = true;
+  const wrap = html`<div class="combo-box">${input}${menu}</div>`;
+  let value = "";
+  let activeIdx = -1;
+  wrap.value = value;
+
+  function matches() {
+    const q = norm(input.value);
+    const list = !q ? options : options.filter((o) => norm(o).includes(q));
+    return list.slice(0, 60);
+  }
+
+  function openMenu() {
+    const list = matches();
+    activeIdx = -1;
+    menu.replaceChildren(
+      ...list.map((o) => {
+        const li = html`<li role="option" data-val="${o}">${o}</li>`;
+        li.onmousedown = (e) => {
+          e.preventDefault();
+          commit(o);
+        };
+        return li;
+      })
+    );
+    menu.hidden = list.length === 0;
+    input.setAttribute("aria-expanded", String(!menu.hidden));
+  }
+
+  function closeMenu() {
+    menu.hidden = true;
+    activeIdx = -1;
+    input.setAttribute("aria-expanded", "false");
+  }
+
+  function commit(o) {
+    const next = o ?? "";
+    input.value = next;
+    closeMenu();
+    if (next !== value) {
+      value = next;
+      wrap.value = value;
+      wrap.dispatchEvent(new CustomEvent("input"));
+    }
+  }
+
+  input.addEventListener("focus", () => {
+    input.select(); // prêt à retaper une autre commune
+    openMenu();
+  });
+  input.addEventListener("input", openMenu);
+  input.addEventListener("blur", () => {
+    // Laisse le mousedown d'un <li> se déclencher avant de valider.
+    setTimeout(() => {
+      const exact = options.find((o) => norm(o) === norm(input.value));
+      if (norm(input.value) === "") commit("");
+      else if (exact) commit(exact);
+      else {
+        input.value = value; // texte libre non reconnu -> on annule
+        closeMenu();
+      }
+    }, 150);
+  });
+  input.addEventListener("keydown", (e) => {
+    const items = [...menu.children];
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (menu.hidden) return openMenu();
+      activeIdx =
+        e.key === "ArrowDown"
+          ? Math.min(activeIdx + 1, items.length - 1)
+          : Math.max(activeIdx - 1, 0);
+      items.forEach((li, i) => li.classList.toggle("active", i === activeIdx));
+      if (items[activeIdx]) items[activeIdx].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter") {
+      if (activeIdx >= 0 && items[activeIdx]) {
+        e.preventDefault();
+        commit(items[activeIdx].dataset.val);
+      }
+    } else if (e.key === "Escape") {
+      input.value = value;
+      closeMenu();
+    }
+  });
+
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+// Mini coloration syntaxique SQL (pas de dépendance : highlight.js n'est pas
+// chargé sur ce deck). Renvoie du HTML — les classes tok-* sont stylées en
+// thème sombre dans custom.css.
+function sqlHighlight(sql) {
+  const KW = new Set([
+    "SELECT", "FROM", "WHERE", "GROUP", "BY", "ORDER", "HAVING", "LIMIT",
+    "OFFSET", "AS", "ON", "AND", "OR", "NOT", "NULL", "IS", "IN", "LIKE",
+    "ILIKE", "BETWEEN", "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "FULL",
+    "CROSS", "UNION", "ALL", "DISTINCT", "ASC", "DESC", "CASE", "WHEN",
+    "THEN", "ELSE", "END", "USING", "WITH", "OVER", "PARTITION"
+  ]);
+  const esc = (s) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const tok = /--[^\n]*|'(?:[^']|'')*'|\b\d+(?:\.\d+)?\b|[A-Za-z_]\w*|[(),.;*=/<>+|!-]+/g;
+  let out = "";
+  let last = 0;
+  let m;
+  while ((m = tok.exec(sql))) {
+    out += esc(sql.slice(last, m.index));
+    last = tok.lastIndex;
+    const t = m[0];
+    if (t.startsWith("--")) out += `<span class="tok-com">${esc(t)}</span>`;
+    else if (t.startsWith("'")) out += `<span class="tok-str">${esc(t)}</span>`;
+    else if (/^\d/.test(t)) out += `<span class="tok-num">${esc(t)}</span>`;
+    else if (/^[A-Za-z_]/.test(t)) {
+      if (KW.has(t.toUpperCase())) out += `<span class="tok-kw">${esc(t)}</span>`;
+      else if (/^\s*\(/.test(sql.slice(tok.lastIndex)))
+        out += `<span class="tok-fn">${esc(t)}</span>`;
+      else out += `<span class="tok-id">${esc(t)}</span>`;
+    } else out += `<span class="tok-op">${esc(t)}</span>`;
+  }
+  out += esc(sql.slice(last));
+  return out;
+}
+```
+
+```{ojs}
+//| echo: false
 // Widget autonome "bouton play + timing + recherche + tableau", pour
 // dupliquer facilement une démo "Tester en live" avec une autre requête.
 // mapRow convertit chaque ligne Arrow renvoyée par db.query en objet JS
@@ -147,6 +304,14 @@ function barCell(share, color = "#4758AB") {
 // (une autre couleur) sur un second champ numérique, pour comparer d'un
 // coup d'oeil deux proportions (ex : part des parcelles vs part de la
 // surface).
+// `sql` peut être une chaîne, ou une fonction `(commune) => chaîne`. Avec
+// `communeSearch: { placeholder, options }`, un champ commune avec
+// autocomplétion (comboBox : valeur toujours "" ou une entrée exacte de
+// `options`) apparaît À CÔTÉ de la barre de recherche, sous le bouton, une
+// fois la démo lancée. Changer la commune relance la requête en direct
+// (debounce), sans avoir à re-cliquer sur play -> requête conditionnelle
+// côté SQL, sans risque d'injecter une commune inexistante.
+// La requête réellement exécutée est affichée (petit) sous le tableau.
 function liveQueryDemo({
   sql,
   mapRow,
@@ -160,21 +325,39 @@ function liveQueryDemo({
   buttonLabel = "Tester en live",
   barColor = "#4758AB",
   extraBar = null,
+  communeSearch = null,
   format = {},
   align = {}
 }) {
   const btn = runLiveButton(buttonLabel);
+  const resolveSql = (commune) => (typeof sql === "function" ? sql(commune) : sql);
+
+  const communeField = communeSearch
+    ? comboBox(communeSearch.options ?? [], { placeholder: communeSearch.placeholder })
+    : null;
   const search = searchInput(searchPlaceholder);
-  search.style.display = "none";
+
+  // Barre de recherche + champ commune : masqués tant que la démo n'a pas
+  // tourné une première fois (rien à filtrer avant).
+  const controls = html`<div class="testlive-controls">${
+    communeField
+      ? html`<label class="testlive-control"><span>Commune</span>${communeField}</label>`
+      : ""
+  }<label class="testlive-control">${search}</label></div>`;
+  controls.style.display = "none";
+
   const statusBox = html`<div></div>`;
   const resultsBox = html`<div></div>`;
+  const sqlBox = html`<div></div>`;
   let currentRows = null;
+  let inFlight = false;
+  let pending = null;
 
-  function renderStatus(elapsed_ms) {
+  function renderStatus(elapsed_ms, commune) {
     statusBox.replaceChildren(
       elapsed_ms == null
         ? html`<p class="testlive-placeholder">Lancer la démo live.</p>`
-        : html`<p class="testlive-timing">⏱️ Temps d'exécution : <strong>${elapsed_ms.toFixed(0)} ms</strong> · ${totalInputRows.toLocaleString("fr-FR")} → ${currentRows.length} lignes</p>`
+        : html`<p class="testlive-timing">⏱️ Temps d'exécution : <strong>${elapsed_ms.toFixed(0)} ms</strong> · ${totalInputRows.toLocaleString("fr-FR")} → ${currentRows.length} lignes${commune ? ` · commune : « ${commune} »` : ""}</p>`
     );
   }
 
@@ -199,30 +382,66 @@ function liveQueryDemo({
     );
   }
 
+  // Sérialise les requêtes : si une nouvelle commune est demandée pendant
+  // qu'une requête tourne, on garde seulement la dernière et on la lance à
+  // la fin (évite les allers-retours d'affichage sur des clics rapides).
+  async function run(commune) {
+    if (inFlight) {
+      pending = commune;
+      return;
+    }
+    inFlight = true;
+    statusBox.querySelector(".testlive-timing")?.classList.add("is-loading");
+    const t0 = performance.now();
+    try {
+      const raw = await db.query(resolveSql(commune));
+      const rows = Array.from(raw, mapRow);
+      const total = d3.sum(rows, (d) => d[valueField]);
+      let withParts = rows.map((d) => ({ ...d, part: total > 0 ? d[valueField] / total : 0 }));
+      if (extraBar) {
+        const totalExtra = d3.sum(rows, (d) => d[extraBar.field]);
+        withParts = withParts.map((d) => ({
+          ...d,
+          [extraBar.key]: totalExtra > 0 ? d[extraBar.field] / totalExtra : 0
+        }));
+      }
+      currentRows = withParts;
+      search.value = "";
+      renderStatus(performance.now() - t0, commune);
+      renderTable();
+      const codeEl = document.createElement("code");
+      codeEl.innerHTML = sqlHighlight(resolveSql(commune).trim());
+      sqlBox.replaceChildren(
+        html`<figure class="testlive-sql"><figcaption>SQL exécuté</figcaption><pre>${codeEl}</pre></figure>`
+      );
+    } catch (e) {
+      statusBox.replaceChildren(html`<p class="testlive-placeholder">⚠️ Requête impossible : ${e.message}</p>`);
+    } finally {
+      inFlight = false;
+      if (pending !== null && pending !== commune) {
+        const next = pending;
+        pending = null;
+        run(next);
+      } else {
+        pending = null;
+      }
+    }
+  }
+
   renderStatus(null);
 
   search.addEventListener("input", renderTable);
 
-  btn.addEventListener("input", async () => {
-    const t0 = performance.now();
-    const raw = await db.query(sql);
-    const rows = Array.from(raw, mapRow);
-    const total = d3.sum(rows, (d) => d[valueField]);
-    let withParts = rows.map((d) => ({ ...d, part: total > 0 ? d[valueField] / total : 0 }));
-    if (extraBar) {
-      const totalExtra = d3.sum(rows, (d) => d[extraBar.field]);
-      withParts = withParts.map((d) => ({
-        ...d,
-        [extraBar.key]: totalExtra > 0 ? d[extraBar.field] / totalExtra : 0
-      }));
-    }
-    currentRows = withParts;
-    renderStatus(performance.now() - t0);
-    search.value = "";
-    search.style.display = "";
-    renderTable();
+  btn.addEventListener("input", () => {
+    controls.style.display = "";
+    run(communeField ? communeField.value : "");
   });
 
-  return html`<div class="testlive-widget">${btn}${statusBox}${search}${resultsBox}</div>`;
+  if (communeField) {
+    const debouncedRun = debounce((v) => run(v), 320);
+    communeField.addEventListener("input", () => debouncedRun(communeField.value));
+  }
+
+  return html`<div class="testlive-widget">${btn}${statusBox}${controls}${resultsBox}${sqlBox}</div>`;
 }
 ```

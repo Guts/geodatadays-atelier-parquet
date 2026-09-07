@@ -100,11 +100,11 @@ Il dit qu'il veut faire de la géo (*in geo veritas* qu'il dit)
 
 ::: {.speaker-2 .fragment}
 * On peut utiliser `Parquet` pour stocker des données géographiques (plus rapide et léger que `GeoJSON`)
-* On peut utiliser les fonctionnalités géographiques de [`DuckDB` {{< iconify vscode-icons:file-type-light-duckdb >}}](https://duckdb.org/) (plutôt léger  que `PostGIS`).
+* On peut utiliser les fonctionnalités géographiques de [`DuckDB` {{< iconify vscode-icons:file-type-light-duckdb >}}](https://duckdb.org/) (plus léger  que `PostGIS`).
 :::
 
 ::: {.speaker-2 .fragment .typing}
-✅️ On a une colonne de type géométrique dans le `Parquet`. Suffit de calculer la surface avec `ST_Area` !
+✅️ On a une colonne de type géométrique dans le `Parquet`. Il suffit de calculer la surface avec `ST_Area` !
 
 ```sql
 SELECT
@@ -138,6 +138,35 @@ On va calculer la part des surfaces (et plus seulement des exploitations) dans c
 
 {{< include demo/test-live-surface.qmd >}}
 
+## Pour explorer ses données à différentes échelles {.slide-chat background-color="#1a1b26"}
+
+:::: {.chat theme="claude-code"}
+
+::: {.speaker-1}
+J'aurais tellement envie de savoir les cultures dominantes à Cauchy-à-la-Tour ... pas le droit de dire *"non"*, bien entendu !
+:::
+
+::: {.speaker-2 .fragment .typing}
+Il suffit de raffiner la requête précédente avec un `WHERE`. Je vais te proposer quelque chose de général. 
+
+```sql
+SELECT
+    COALESCE(d.nom_chapitre, 'Non classé') AS famille,
+    COUNT(*) AS n_parcelles,
+    SUM(ST_Area(r.geom)) / 10000 AS surface_ha
+FROM read_parquet('${RPG_URL}') r
+LEFT JOIN dico d ON r.code_cultu = d.code_culture
+GROUP BY 1
+ORDER BY surface_ha DESC
+WHERE r.nom_officiel ILIKE '%<commune>%'
+```
+:::
+
+::::
+
+## Test live #3 {.test-live-slide}
+
+{{< include demo/test-live-commune.qmd >}}
 
 ## Pour des applis web {.slide-chat background-color="#1a1b26"}
 

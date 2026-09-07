@@ -53,7 +53,13 @@ topCultureSet = new Set(topCultures)
 ```{ojs}
 //| echo: false
 //| output: false
-cultureList = topCultures.length < cultureShareData.length ? [...topCultures, AUTRES_LABEL] : topCultures
+// Sélecteur trié par ordre alphabétique (l'ordre "par surface" de
+// topCultures sert seulement à décider quelles cultures sont "top") ;
+// "Autres" reste en dernier.
+cultureList = {
+  const sorted = [...topCultures].sort((a, b) => a.localeCompare(b, "fr"));
+  return topCultures.length < cultureShareData.length ? [...sorted, AUTRES_LABEL] : sorted;
+}
 ```
 
 :::: {.columns}
@@ -198,7 +204,11 @@ allParcelsData = {
 
 ```{ojs}
 //| echo: false
-viewof cultureSel = Inputs.select(cultureList, { label: "Culture à surligner", value: "Blé tendre" })
+viewof cultureSel = {
+  const sel = Inputs.select(cultureList, { label: "Culture à surligner", value: "Blé tendre" });
+  sel.classList.add("compact-select");
+  return sel;
+}
 ```
 
 ```{ojs}

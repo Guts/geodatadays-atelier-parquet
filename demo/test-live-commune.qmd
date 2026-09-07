@@ -1,0 +1,79 @@
+```{ojs}
+//| echo: false
+//| output: false
+// Même calcul que la démo précédente (part des surfaces par culture), mais
+// avec un filtre commune appliqué CÔTÉ SQL : requête conditionnelle selon
+// que le champ commune est vide ou non.
+//   - vide      -> exactement la requête de `test-live-surface.qmd`
+//                  (tout le département)
+//   - commune   -> on ajoute `AND r.nom_officiel ILIKE '%…%'`
+// Changer la commune (autocomplétion, valeur forcément valide) relance la
+// requête en direct : le filtre coûte une vraie requête SQL, pas un tri
+// client.
+sqlTestLiveCommune = (commune) => `
+SELECT
+    r.code_cultu,
+    COALESCE(d.nom_culture, r.code_cultu) AS nom_culture,
+    COALESCE(d.nom_chapitre, 'Non classé') AS nom_chapitre,
+    COUNT(*) AS n,
+    SUM(r.area) / 10000 AS surface_ha
+FROM read_parquet('${RPG_URL}') r
+LEFT JOIN dico d ON r.code_cultu = d.code_culture
+WHERE r.code_cultu IS NOT NULL${commune ? `
+    AND r.nom_officiel ILIKE '%${commune.replace(/'/g, "''")}%'` : ""}
+GROUP BY 1, 2, 3
+ORDER BY surface_ha DESC
+`
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+// Liste des communes présentes dans le RPG, pour l'autocomplétion du champ
+// de filtre (comboBox : la valeur choisie est forcément l'une d'elles).
+// DISTINCT direct sur le parquet : le fichier est déjà en cache (warmup),
+// donc c'est quasi instantané et ça reste cohérent avec le `WHERE
+// r.nom_officiel ILIKE …` de la requête.
+communeNames = Array.from(
+  await db.query(
+    `SELECT DISTINCT nom_officiel FROM read_parquet('${RPG_URL}') WHERE nom_officiel IS NOT NULL ORDER BY 1`
+  ),
+  (d) => d.nom_officiel
+)
+```
+
+```{ojs}
+//| echo: false
+liveQueryDemo({
+  sql: sqlTestLiveCommune,
+  communeSearch: {
+    placeholder: "Toutes (taper pour filtrer)…",
+    options: communeNames
+  },
+  mapRow: (d) => ({
+    code_cultu: d.code_cultu,
+    nom_culture: d.nom_culture,
+    nom_chapitre: d.nom_chapitre,
+    n: Number(d.n),
+    surface_ha: Number(d.surface_ha)
+  }),
+  valueField: "surface_ha",
+  extraBar: { field: "n", key: "part_n", color: "#4758AB" },
+  searchFields: ["nom_culture", "nom_chapitre", "code_cultu"],
+  columns: ["nom_culture", "nom_chapitre", "n", "part_n", "surface_ha", "part"],
+  header: {
+    nom_culture: "Culture",
+    nom_chapitre: "Famille",
+    n: "Parcelles",
+    part_n: "Part parcelles",
+    surface_ha: "Surface (ha)",
+    part: "Part surface"
+  },
+  width: { nom_culture: 150, nom_chapitre: 150, n: 70, part_n: 120, surface_ha: 90, part: 120 },
+  valueFormat: (v) => frNumber(v, 0),
+  align: { n: "right" },
+  format: { n: frInt },
+  barColor: "#ec6842",
+  searchPlaceholder: "🔍 Rechercher une culture ou une famille…"
+})
+```
