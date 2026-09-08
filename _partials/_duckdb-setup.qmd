@@ -434,6 +434,9 @@ function liveQueryDemo({
 
   btn.addEventListener("input", () => {
     controls.style.display = "";
+    // Passe le cadre en mode "lecture" : le bouton play cesse d'être centré
+    // comme la vignette d'une vidéo, le contenu s'empile normalement.
+    btn.closest(".testlive-widget")?.classList.add("is-running");
     run(communeField ? communeField.value : "");
   });
 
